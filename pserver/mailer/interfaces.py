@@ -10,8 +10,10 @@ class IMailer(Interface):
     async def initialize(app):
         pass
 
-    def send(*message):
+    def send(recipient=None, subject=None, message=None,
+             text=None, html=None, sender=None):
         pass
 
-    def send_immediately(*message, fail_silently=False):
+    def send_immediately(recipient=None, subject=None, message=None,
+                         text=None, html=None, sender=None, fail_silently=False):
         pass

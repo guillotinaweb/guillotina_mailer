@@ -25,7 +25,8 @@ setup(
         'setuptools',
         'plone.server',
         'repoze.sendmail>=4.1',
-        'transaction'
+        'transaction',
+        'html2text'
     ],
     tests_require=[
         'pytest',

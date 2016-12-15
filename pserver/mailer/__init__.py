@@ -6,15 +6,17 @@ app_settings = {
         "host": "localhost",
         "port": 25,
         "debug": False,
-        "utility": "pserver.mailer.utility.MailerUtility"
+        "utility": "pserver.mailer.utility.MailerUtility",
+        "use_html2text": True
     }
 }
 
 
-def includeme(root):
-    from plone.server import app_settings as main_app_settings
+def includeme(root, settings):
+    utility = settings.get('mailer', {}).get('utility',
+                                             app_settings['mailer']['utility'])
     root.add_async_utility({
         "provides": "pserver.mailer.interfaces.IMailer",
-        "factory": main_app_settings['mailer']['utility'],
+        "factory": utility,
         "settings": {}
     })

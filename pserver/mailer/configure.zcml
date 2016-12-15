@@ -1,0 +1,17 @@
+<configure xmlns="http://namespaces.zope.org/zope"
+           xmlns:plone="http://namespaces.plone.org/plone">
+
+  <include package="plone.server" file="meta.zcml" />
+  <plone:api file="api.json" />
+
+  <permission
+      id="mailer.SendMail"
+      title="Request subscription"
+      />
+
+  <grant
+      permission="mailer.SendMail"
+      role="plone.SiteAdmin"
+      />
+
+</configure>

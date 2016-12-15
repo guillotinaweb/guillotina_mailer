@@ -1,0 +1,14 @@
+{
+  "contenttypes": {
+    "plone.server.interfaces.ISite": {
+      "endpoints": {
+        "@mailer": {
+          "POST": {
+            "factory": "pserver.mailer.api.SendMail",
+            "permission": "mailer.SendMail"
+          }
+        }
+      }
+    }
+  }
+}
