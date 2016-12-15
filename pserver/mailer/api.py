@@ -7,8 +7,9 @@ from plone.server.browser import Response
 class SendMail(Service):
 
     async def __call__(self):
-        import pdb; pdb.set_trace()
         data = await self.request.json()
         mailer = queryUtility(IMailer)
         mailer.send(**data)
-        return Response(response={}, status=204)
+        return Response(response={
+            'messages_sent': 1
+        }, status=200)

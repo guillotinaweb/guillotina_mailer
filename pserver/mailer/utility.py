@@ -21,22 +21,6 @@ logger = logging.getLogger(__name__)
 
 
 @implementer(IMailer)
-class PrintingMailerUtility(object):
-
-    def __init__(self, settings):
-        pass
-
-    async def initialize(self, app):
-        pass
-
-    def send(self, **kwargs):
-        print('DEBUG MAILER: \n {}'.format(pformat(kwargs)))
-
-    def send_immediately(self, **kwargs):
-        print('DEBUG MAILER: \n {}'.format(pformat(kwargs)))
-
-
-@implementer(IMailer)
 class MailerUtility(object):
 
     def __init__(self, settings):
@@ -102,3 +86,19 @@ class MailerUtility(object):
         except smtplib.socket.error:
             if not fail_silently:
                 raise
+
+
+@implementer(IMailer)
+class PrintingMailerUtility(MailerUtility):
+
+    def __init__(self, settings):
+        pass
+
+    async def initialize(self, app):
+        pass
+
+    def send(self, **kwargs):
+        message = self.get_message(**kwargs)
+        print('DEBUG MAILER: \n {}'.format(message.as_string()))
+
+    send_immediately = send
