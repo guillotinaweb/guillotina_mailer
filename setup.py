@@ -26,7 +26,8 @@ setup(
         'plone.server',
         'repoze.sendmail>=4.1',
         'transaction',
-        'html2text'
+        'html2text',
+        'aiosmtplib'
     ],
     tests_require=[
         'pytest',

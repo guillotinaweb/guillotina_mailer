@@ -9,7 +9,7 @@ class SendMail(Service):
     async def __call__(self):
         data = await self.request.json()
         mailer = queryUtility(IMailer)
-        mailer.send(**data)
+        await mailer.send(**data)
         return Response(response={
             'messages_sent': 1
         }, status=200)
