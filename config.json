@@ -1,0 +1,9 @@
+{
+  "applications": ["pserver.mailer"],
+  "mail": {
+    "default_sender": "foo@bar.com",
+    "host": "localhost",
+    "port": 25,
+    "debug": false
+  }
+}
