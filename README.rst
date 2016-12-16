@@ -59,4 +59,4 @@ You can also directly use the mailer in your code::
     from zope.component import queryUtility
     from pserver.mailer.interfaces import IMailer
     mailer = queryUtility(IMailer)
-    mailer.send(recipient='john@doe.com', subject='This is my subject', text='Body of email')
+    await mailer.send(recipient='john@doe.com', subject='This is my subject', text='Body of email')
