@@ -5,10 +5,10 @@ from email.utils import formatdate
 from email.utils import make_msgid
 from html2text import html2text
 from plone.server import app_settings
+from plone.server.async import QueueUtility
 from pserver.mailer.interfaces import IMailer
 from repoze.sendmail import encoding
 from zope.interface import implementer
-from plone.server.async import QueueUtility
 
 import aiosmtplib
 import asyncio
@@ -23,15 +23,18 @@ logger = logging.getLogger(__name__)
 class MailerUtility(QueueUtility):
 
     def __init__(self, settings):
-        super(MailerUtility, self).__init__(self, settings)
+        self._settings = settings
+        super(MailerUtility, self).__init__(settings)
         self.smtp_mailer = self.get_smtp_mailer()
 
     @property
     def settings(self):
-        return app_settings['mailer']
+        settings = app_settings.get('mailer', {})
+        settings.update(self._settings.get('mailer', {}))
+        return settings
 
     async def _send(self, sender, recipients, message):
-        return await self.smtp_mailer.sendmail(sender, recipients, message)
+        return await self.smtp_mailer.sendmail(sender, recipients, message.as_string())
 
     def get_smtp_mailer(self):
         mailer_settings = self.settings

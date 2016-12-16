@@ -18,5 +18,5 @@ def includeme(root, settings):
     root.add_async_utility({
         "provides": "pserver.mailer.interfaces.IMailer",
         "factory": utility,
-        "settings": {}
+        "settings": settings.get('mailer', {})
     })
