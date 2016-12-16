@@ -122,6 +122,7 @@ class PrintingMailerUtility(MailerUtility):
 
     def __init__(self, settings):
         self._queue = asyncio.Queue()
+        self._settings = settings
 
     async def connect(self):
         pass
