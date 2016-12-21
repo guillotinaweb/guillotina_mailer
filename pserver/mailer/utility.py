@@ -14,6 +14,7 @@ import aiosmtplib
 import asyncio
 import logging
 import smtplib
+import time
 
 
 logger = logging.getLogger(__name__)
@@ -33,8 +34,17 @@ class MailerUtility(QueueUtility):
         settings.update(self._settings.get('mailer', {}))
         return settings
 
-    async def _send(self, sender, recipients, message):
-        return await self.smtp_mailer.sendmail(sender, recipients, message.as_string())
+    async def _send(self, sender, recipients, message, retry=False):
+        try:
+            return await self.smtp_mailer.sendmail(sender, recipients, message.as_string())
+        except aiosmtplib.errors.SMTPServerDisconnected:
+            if retry:
+                # we only retry once....
+                # we could manage a retry queue and wait until server becomes
+                # active it is it down...
+                raise
+            await self.connect()
+            return await self._send(sender, recipients, message, retry=True)
 
     def get_smtp_mailer(self):
         mailer_settings = self.settings
@@ -52,7 +62,7 @@ class MailerUtility(QueueUtility):
         while True:
             got_obj = False
             try:
-                priority, args = await self._queue.get()
+                priority, _, args = await self._queue.get()
                 got_obj = True
                 try:
                     await self._send(*args)
@@ -96,7 +106,7 @@ class MailerUtility(QueueUtility):
         if sender is None:
             sender = self.settings.get('default_sender')
         message = self.get_message(recipient, subject, sender, message, text, html)
-        await self._queue.put((priority, (sender, [recipient], message)))
+        await self._queue.put((priority, time.time(), (sender, [recipient], message)))
 
     async def send_immediately(self, recipient=None, subject=None, message=None,
                                text=None, html=None, sender=None, fail_silently=False):
