@@ -9,6 +9,9 @@ from plone.server.utils import get_random_string
 from pserver.mailer.interfaces import IMailer
 from repoze.sendmail import encoding
 from zope.interface import implementer
+from pserver.mailer.exceptions import NoEndpointDefinedException
+from pserver.mailer.interfaces import IMailEndpoint
+from zope.component import queryUtility
 
 import aiosmtplib
 import asyncio
@@ -21,13 +24,46 @@ import time
 logger = logging.getLogger(__name__)
 
 
+@implementer(IMailEndpoint)
+class SMTPMailEndpoint(object):
+
+    def __init__(self):
+        self.settings = {}
+        self._conn = None
+
+    def from_settings(self, settings):
+        self.settings = settings
+
+    @property
+    def conn(self):
+        if self._conn is None:
+            self._conn = aiosmtplib.SMTP(
+                self.settings['host'],
+                self.settings['port']
+            )
+        return self._conn
+
+    async def send(self, sender, recipients, message, retry=False):
+        try:
+            return await self.conn.sendmail(sender, recipients, message.as_string())
+        except aiosmtplib.errors.SMTPServerDisconnected:
+            if retry:
+                # we only retry once....
+                # we could manage a retry queue and wait until server becomes
+                # active if it is down...
+                raise
+            await self.conn.connect()
+            return await self.send(sender, recipients, message, retry=True)
+
+
 @implementer(IMailer)
 class MailerUtility(QueueUtility):
 
     def __init__(self, settings):
         self._settings = settings
         super(MailerUtility, self).__init__(settings)
-        self.smtp_mailer = self.get_smtp_mailer()
+        self._endpoints = {}
+        self._exceptions = False
 
     @property
     def settings(self):
@@ -35,31 +71,36 @@ class MailerUtility(QueueUtility):
         settings.update(self._settings.get('mailer', {}))
         return settings
 
-    async def _send(self, sender, recipients, message, retry=False):
-        try:
-            return await self.smtp_mailer.sendmail(sender, recipients, message.as_string())
-        except aiosmtplib.errors.SMTPServerDisconnected:
-            if retry:
-                # we only retry once....
-                # we could manage a retry queue and wait until server becomes
-                # active if it is down...
-                raise
-            await self.connect()
-            return await self._send(sender, recipients, message, retry=True)
+    def get_endpoint(self, endpoint_name):
+        """
+        handle sending the mail
+        right now, only support for smtp
+        """
+        if endpoint_name not in self._endpoints:
+            settings = self.settings['endpoints'][endpoint_name]
+            utility = queryUtility(IMailEndpoint, name=settings['type'])
+            if utility is None:
+                if len(self._endpoints) > 0:
+                    fallback = list(self.endpoints.keys())[0]
+                    logger.warn('Endpoint "{}" not configured. Falling back to "{}"'.format(
+                        endpoint_name, fallback
+                    ))
+                    return self._endpoints[endpoint_name]
+                else:
+                    raise NoEndpointDefinedException('{} mail endpoint not defined'.format(
+                        endpoint_name
+                    ))
+            utility.from_settings(settings)
+            self._endpoints[endpoint_name] = utility
+        return self._endpoints[endpoint_name]
 
-    def get_smtp_mailer(self):
-        mailer_settings = self.settings
-        host = mailer_settings.get('host', 'localhost')
-        port = mailer_settings.get('port', 25)
-        self._exceptions = False
-        return aiosmtplib.SMTP(hostname=host, port=port)
-
-    async def connect(self):
-        return await self.smtp_mailer.connect()
+    async def _send(self, sender, recipients, message, endpoint_name='default',
+                    retry=False):
+        endpoint = self.get_endpoint(endpoint_name)
+        return await endpoint.send(sender, recipients, message)
 
     async def initialize(self, app):
         self.app = app
-        await self.connect()
         while True:
             got_obj = False
             try:
@@ -107,16 +148,18 @@ class MailerUtility(QueueUtility):
         return message
 
     async def send(self, recipient=None, subject=None, message=None,
-                   text=None, html=None, sender=None, message_id=None, priority=3):
+                   text=None, html=None, sender=None, message_id=None,
+                   endpoint='default', priority=3):
         if sender is None:
             sender = self.settings.get('default_sender')
         message = self.get_message(recipient, subject, sender, message, text,
                                    html, message_id=message_id)
-        await self._queue.put((priority, time.time(), (sender, [recipient], message)))
+        await self._queue.put((priority, time.time(),
+                               (sender, [recipient], message, endpoint)))
 
     async def send_immediately(self, recipient=None, subject=None, message=None,
                                text=None, html=None, sender=None, message_id=None,
-                               fail_silently=False):
+                               endpoint='default', fail_silently=False):
         if sender is None:
             sender = self.settings.get('default_sender')
         message = self.get_message(recipient, subject, sender, message, text,
@@ -126,7 +169,7 @@ class MailerUtility(QueueUtility):
             message['Date'] = formatdate()
 
         try:
-            return await self._send(sender, [recipient], message)
+            return await self._send(sender, [recipient], message, endpoint)
         except smtplib.socket.error:
             if not fail_silently:
                 raise
@@ -147,8 +190,5 @@ class PrintingMailerUtility(MailerUtility):
         self._queue = asyncio.Queue()
         self._settings = settings
 
-    async def connect(self):
-        pass
-
-    async def _send(self, sender, recipients, message):
-        print('DEBUG MAILER: \n {}'.format(message.as_string()))
+    async def _send(self, sender, recipients, message, endpoint_name='default'):
+        print('DEBUG MAILER({}): \n {}'.format(endpoint_name, message.as_string()))

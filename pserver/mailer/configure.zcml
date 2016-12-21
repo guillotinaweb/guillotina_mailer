@@ -15,4 +15,9 @@
       role="plone.SiteAdmin"
       />
 
+  <utility
+      factory=".utility.SMTPMailEndpoint"
+      provides=".interfaces.IMailEndpoint"
+      name="smtp" />
+
 </configure>

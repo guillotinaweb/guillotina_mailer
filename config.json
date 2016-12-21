@@ -2,8 +2,13 @@
   "applications": ["pserver.mailer"],
   "mailer": {
     "default_sender": "foo@bar.com",
-    "host": "localhost",
-    "port": 25,
+    "endpoints": {
+      "default": {
+        "type": "smtp",
+        "host": "localhost",
+        "port": 25
+      }
+    },
     "debug": false,
     "use_html2text": true,
     "domain": null

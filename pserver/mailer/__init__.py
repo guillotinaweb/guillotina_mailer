@@ -3,8 +3,13 @@
 app_settings = {
     "mailer": {
         "default_sender": "foo@bar.com",
-        "host": "localhost",
-        "port": 25,
+        "endpoints": {
+            "default": {
+                "type": "smtp",
+                "host": "localhost",
+                "port": 25
+            }
+        },
         "debug": False,
         "utility": "pserver.mailer.utility.MailerUtility",
         "use_html2text": True,
