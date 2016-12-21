@@ -7,7 +7,8 @@ app_settings = {
         "port": 25,
         "debug": False,
         "utility": "pserver.mailer.utility.MailerUtility",
-        "use_html2text": True
+        "use_html2text": True,
+        "domain": None
     }
 }
 

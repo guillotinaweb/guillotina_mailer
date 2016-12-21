@@ -2,10 +2,10 @@
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate
-from email.utils import make_msgid
 from html2text import html2text
 from plone.server import app_settings
 from plone.server.async import QueueUtility
+from plone.server.utils import get_random_string
 from pserver.mailer.interfaces import IMailer
 from repoze.sendmail import encoding
 from zope.interface import implementer
@@ -14,6 +14,7 @@ import aiosmtplib
 import asyncio
 import logging
 import smtplib
+import socket
 import time
 
 
@@ -41,7 +42,7 @@ class MailerUtility(QueueUtility):
             if retry:
                 # we only retry once....
                 # we could manage a retry queue and wait until server becomes
-                # active it is it down...
+                # active if it is down...
                 raise
             await self.connect()
             return await self._send(sender, recipients, message, retry=True)
@@ -91,7 +92,7 @@ class MailerUtility(QueueUtility):
             message.attach(MIMEText(html, 'html'))
 
     def get_message(self, recipient, subject, sender,
-                    message=None, text=None, html=None):
+                    message=None, text=None, html=None, message_id=None):
         if message is None:
             message = MIMEMultipart('alternative')
             self.build_message(message, text, html)
@@ -99,24 +100,28 @@ class MailerUtility(QueueUtility):
         message['Subject'] = subject
         message['From'] = sender
         message['To'] = recipient
+        if message_id is not None:
+            message['Message-Id'] = message_id
+        else:
+            message['Message-Id'] = self.create_message_id()
         return message
 
     async def send(self, recipient=None, subject=None, message=None,
-                   text=None, html=None, sender=None, priority=3):
+                   text=None, html=None, sender=None, message_id=None, priority=3):
         if sender is None:
             sender = self.settings.get('default_sender')
-        message = self.get_message(recipient, subject, sender, message, text, html)
+        message = self.get_message(recipient, subject, sender, message, text,
+                                   html, message_id=message_id)
         await self._queue.put((priority, time.time(), (sender, [recipient], message)))
 
     async def send_immediately(self, recipient=None, subject=None, message=None,
-                               text=None, html=None, sender=None, fail_silently=False):
+                               text=None, html=None, sender=None, message_id=None,
+                               fail_silently=False):
         if sender is None:
             sender = self.settings.get('default_sender')
-        message = self.get_message(recipient, subject, sender, message, text, html)
+        message = self.get_message(recipient, subject, sender, message, text,
+                                   html, message_id=message_id)
         encoding.cleanup_message(message)
-        messageid = message['Message-Id']
-        if messageid is None:
-            messageid = message['Message-Id'] = make_msgid('repoze.sendmail')
         if message['Date'] is None:
             message['Date'] = formatdate()
 
@@ -125,6 +130,14 @@ class MailerUtility(QueueUtility):
         except smtplib.socket.error:
             if not fail_silently:
                 raise
+
+    def create_message_id(self, _id=''):
+        domain = self.settings['domain']
+        if domain is None:
+            domain = socket.gethostname()
+        if not _id:
+            _id = '%s-%s' % (str(time.time()), get_random_string(20))
+        return '<%s@%s>' % (_id, domain)
 
 
 @implementer(IMailer)
