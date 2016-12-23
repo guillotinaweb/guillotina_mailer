@@ -192,3 +192,29 @@ class PrintingMailerUtility(MailerUtility):
 
     async def _send(self, sender, recipients, message, endpoint_name='default'):
         print('DEBUG MAILER({}): \n {}'.format(endpoint_name, message.as_string()))
+
+
+@implementer(IMailer)
+class TestMailerUtility(MailerUtility):
+
+    def __init__(self, settings):
+        self._queue = asyncio.Queue()
+        self.mail = []
+
+    async def send(self, recipient=None, subject=None, message=None,
+                   text=None, html=None, sender=None, message_id=None,
+                   endpoint='default', priority=3, immediate=False):
+        self.mail.append({
+            'subject': subject,
+            'sender': sender,
+            'recipient': recipient,
+            'message': message,
+            'text': text,
+            'html': html,
+            'message_id': message_id,
+            'endpoint': endpoint,
+            'immediate': immediate
+        })
+
+    async def send_immediately(self, *args, **kwargs):
+        self.send(*args, **kwargs, immediate=True)
