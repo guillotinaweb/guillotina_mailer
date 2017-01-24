@@ -2,21 +2,6 @@
            xmlns:plone="http://namespaces.plone.org/plone"
            i18n_domain="plone.server">
 
-  <include package="plone.server" file="meta.zcml" />
-  <include package="zope.securitypolicy" file="meta.zcml" />
-
-  <plone:api file="api.json" />
-
-  <permission
-      id="mailer.SendMail"
-      title="Request subscription"
-      />
-
-  <grant
-      permission="mailer.SendMail"
-      role="plone.SiteAdmin"
-      />
-
   <utility
       factory=".utility.SMTPMailEndpoint"
       provides=".interfaces.IMailEndpoint"

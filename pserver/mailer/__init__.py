@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from plone.server import configure
 
 app_settings = {
     "mailer": {
@@ -18,6 +19,10 @@ app_settings = {
 }
 
 
+configure.permission(id="mailer.SendMail", title="Request subscription")
+configure.grant(permission="mailer.SendMail", role="plone.SiteAdmin")
+
+
 def includeme(root, settings):
     utility = settings.get('mailer', {}).get('utility',
                                              app_settings['mailer']['utility'])
@@ -26,3 +31,5 @@ def includeme(root, settings):
         "factory": utility,
         "settings": settings.get('mailer', {})
     })
+
+    configure.scan('pserver.mailer.api')
