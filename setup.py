@@ -3,7 +3,7 @@ from setuptools import find_packages
 from setuptools import setup
 
 setup(
-    name='pserver.mailer',
+    name='guillotina_mailer',
     version=open('VERSION').read().strip(),
     long_description=(open('README.rst').read() + '\n' +
                       open('CHANGELOG.rst').read()),
@@ -15,18 +15,17 @@ setup(
     setup_requires=[
         'pytest-runner',
     ],
-    keywords='async mail plone',
+    keywords='async mail guillotina',
     license='BSD',
     zip_safe=True,
     author='Nathan Van Gheem',
     author_email='nathan.vangheem@wildcardcorp.com',
-    url='https://github.com/pyrenees/pserver.mailer',
+    url='https://github.com/pyrenees/guillotina_mailer',
     include_package_data=True,
     packages=find_packages(exclude=['ez_setup']),
-    namespace_packages=['pserver'],
     install_requires=[
         'setuptools',
-        'plone.server',
+        'guillotina',
         'repoze.sendmail>=4.1',
         'transaction',
         'html2text',
@@ -36,8 +35,8 @@ setup(
         'pytest',
     ],
     entry_points={
-        'plone.server': [
-            'include = pserver.mailer',
+        'guillotina': [
+            'include = guillotina_mailer',
         ]
     }
 )

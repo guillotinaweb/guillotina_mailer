@@ -1,5 +1,5 @@
 {
-  "applications": ["pserver.mailer"],
+  "applications": ["guillotina_mailer"],
   "mailer": {
     "default_sender": "foo@bar.com",
     "endpoints": {

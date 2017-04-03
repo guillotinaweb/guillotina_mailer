@@ -1,6 +1,6 @@
 .. contents::
 
-PSERVER.MAILER
+guillotina_mailer
 ==============
 
 
@@ -9,7 +9,7 @@ Configuration
 
 config.json can include mailer section::
 
-    "applications": ["pserver.mailer"],
+    "applications": ["guillotina_mailer"],
     "mailer": {
       "default_sender": "foo@bar.com",
       "endpoints": {
@@ -27,7 +27,7 @@ Printing mailer
 
 For development/debugging, you can use a console print mailer::
 
-    "applications": ["pserver.mailer"],
+    "applications": ["guillotina_mailer"],
     "mailer": {
       "default_sender": "foo@bar.com",
       "endpoints": {
@@ -37,14 +37,14 @@ For development/debugging, you can use a console print mailer::
           "port": 25
         }
       },
-      "utility": "pserver.mailer.utility.PrintingMailerUtility"
+      "utility": "guillotina_mailer.utility.PrintingMailerUtility"
     }
 
 
 Sending mail
 ------------
 
-POST http://localhost:8080/zodb/plone/@mailer
+POST http://localhost:8080/zodb/container/@mailer
 
     {
       "sender": "foo@bar.com",
@@ -57,8 +57,8 @@ POST http://localhost:8080/zodb/plone/@mailer
 Permissions
 -----------
 
-`pserver.mailer` defines a permission `mailer.SendMail` which, by default,
-only the `plone.SiteAdmin` role is assigned.
+`guillotina_mailer` defines a permission `mailer.SendMail` which, by default,
+only the `guillotina.ContainerAdmin` role is assigned.
 
 
 Using the mailer in code
@@ -66,7 +66,7 @@ Using the mailer in code
 
 You can also directly use the mailer in your code::
 
-    from zope.component import queryUtility
-    from pserver.mailer.interfaces import IMailer
+    from guillotina.component import queryUtility
+    from guillotina_mailer.interfaces import IMailer
     mailer = queryUtility(IMailer)
     await mailer.send(recipient='john@doe.com', subject='This is my subject', text='Body of email')

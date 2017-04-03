@@ -2,16 +2,16 @@
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate
+from guillotina import app_settings
+from guillotina.async import QueueUtility
+from guillotina.component import queryUtility
+from guillotina.utils import get_random_string
+from guillotina_mailer.exceptions import NoEndpointDefinedException
+from guillotina_mailer.interfaces import IMailEndpoint
+from guillotina_mailer.interfaces import IMailer
 from html2text import html2text
-from plone.server import app_settings
-from plone.server.async import QueueUtility
-from plone.server.utils import get_random_string
-from pserver.mailer.interfaces import IMailer
 from repoze.sendmail import encoding
 from zope.interface import implementer
-from pserver.mailer.exceptions import NoEndpointDefinedException
-from pserver.mailer.interfaces import IMailEndpoint
-from zope.component import queryUtility
 
 import aiosmtplib
 import asyncio
@@ -59,11 +59,12 @@ class SMTPMailEndpoint(object):
 @implementer(IMailer)
 class MailerUtility(QueueUtility):
 
-    def __init__(self, settings):
+    def __init__(self, settings, loop=None):
         self._settings = settings
-        super(MailerUtility, self).__init__(settings)
+        super(MailerUtility, self).__init__(settings, loop=loop)
         self._endpoints = {}
         self._exceptions = False
+        self.loop = loop
 
     @property
     def settings(self):
@@ -186,8 +187,8 @@ class MailerUtility(QueueUtility):
 @implementer(IMailer)
 class PrintingMailerUtility(MailerUtility):
 
-    def __init__(self, settings):
-        self._queue = asyncio.Queue()
+    def __init__(self, settings, loop=None):
+        self._queue = asyncio.Queue(loop=loop)
         self._settings = settings
 
     async def _send(self, sender, recipients, message, endpoint_name='default'):
@@ -197,8 +198,8 @@ class PrintingMailerUtility(MailerUtility):
 @implementer(IMailer)
 class TestMailerUtility(MailerUtility):
 
-    def __init__(self, settings):
-        self._queue = asyncio.Queue()
+    def __init__(self, settings, loop=None):
+        self._queue = asyncio.Queue(loop=loop)
         self.mail = []
 
     async def send(self, recipient=None, subject=None, message=None,
