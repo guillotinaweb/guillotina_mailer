@@ -134,7 +134,8 @@ class MailerUtility(QueueUtility):
             message.attach(MIMEText(html, 'html'))
 
     def get_message(self, recipient, subject, sender,
-                    message=None, text=None, html=None, message_id=None):
+                    message=None, text=None, html=None, message_id=None,
+                    attachments=[]):
         if message is None:
             message = MIMEMultipart('alternative')
             self.build_message(message, text, html)
@@ -146,25 +147,30 @@ class MailerUtility(QueueUtility):
             message['Message-Id'] = message_id
         else:
             message['Message-Id'] = self.create_message_id()
+
+        for attachment in attachments:
+            message.attach(attachment)
+
         return message
 
     async def send(self, recipient=None, subject=None, message=None,
                    text=None, html=None, sender=None, message_id=None,
-                   endpoint='default', priority=3):
+                   endpoint='default', priority=3, attachments=[]):
         if sender is None:
             sender = self.settings.get('default_sender')
         message = self.get_message(recipient, subject, sender, message, text,
-                                   html, message_id=message_id)
+                                   html, message_id=message_id, attachments=attachments)
         await self._queue.put((priority, time.time(),
                                (sender, [recipient], message, endpoint)))
 
     async def send_immediately(self, recipient=None, subject=None, message=None,
                                text=None, html=None, sender=None, message_id=None,
-                               endpoint='default', fail_silently=False):
+                               endpoint='default', fail_silently=False,
+                               attachments=[]):
         if sender is None:
             sender = self.settings.get('default_sender')
         message = self.get_message(recipient, subject, sender, message, text,
-                                   html, message_id=message_id)
+                                   html, message_id=message_id, attachments=attachments)
         encoding.cleanup_message(message)
         if message['Date'] is None:
             message['Date'] = formatdate()
