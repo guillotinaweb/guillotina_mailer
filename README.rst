@@ -44,7 +44,7 @@ For development/debugging, you can use a console print mailer::
 Sending mail
 ------------
 
-POST http://localhost:8080/zodb/container/@mailer
+POST http://localhost:8080/zodb/container/@mailer::
 
     {
       "sender": "foo@bar.com",

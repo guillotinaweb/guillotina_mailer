@@ -5,6 +5,7 @@ from setuptools import setup
 setup(
     name='guillotina_mailer',
     version=open('VERSION').read().strip(),
+    description='Mailer integration with guillotina',
     long_description=(open('README.rst').read() + '\n' +
                       open('CHANGELOG.rst').read()),
     classifiers=[
