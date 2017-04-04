@@ -33,10 +33,5 @@ setup(
     ],
     tests_require=[
         'pytest',
-    ],
-    entry_points={
-        'guillotina': [
-            'include = guillotina_mailer',
-        ]
-    }
+    ]
 )
