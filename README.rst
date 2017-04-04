@@ -1,7 +1,7 @@
 .. contents::
 
 guillotina_mailer
-==============
+=================
 
 
 Configuration
