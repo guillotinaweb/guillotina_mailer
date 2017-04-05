@@ -210,7 +210,7 @@ class TestMailerUtility(MailerUtility):
 
     async def send(self, recipient=None, subject=None, message=None,
                    text=None, html=None, sender=None, message_id=None,
-                   endpoint='default', priority=3, immediate=False):
+                   endpoint='default', priority=3, immediate=False, attachments=[]):
         self.mail.append({
             'subject': subject,
             'sender': sender,
@@ -220,8 +220,9 @@ class TestMailerUtility(MailerUtility):
             'html': html,
             'message_id': message_id,
             'endpoint': endpoint,
-            'immediate': immediate
+            'immediate': immediate,
+            'attachments': []
         })
 
     async def send_immediately(self, *args, **kwargs):
-        self.send(*args, **kwargs, immediate=True)
+        await self.send(*args, **kwargs, immediate=True)
