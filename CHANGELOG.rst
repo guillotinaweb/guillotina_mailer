@@ -1,4 +1,4 @@
-1.0.1 (unreleased)
+1.0.1 (2017-04-10)
 ------------------
 
 - remove dependencies on repoze.sendmail and transaction
