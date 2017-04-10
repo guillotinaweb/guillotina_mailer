@@ -27,8 +27,6 @@ setup(
     install_requires=[
         'setuptools',
         'guillotina',
-        'repoze.sendmail>=4.1',
-        'transaction',
         'html2text',
         'aiosmtplib'
     ],

@@ -6,11 +6,11 @@ from guillotina import app_settings
 from guillotina.async import QueueUtility
 from guillotina.component import queryUtility
 from guillotina.utils import get_random_string
+from guillotina_mailer import encoding
 from guillotina_mailer.exceptions import NoEndpointDefinedException
 from guillotina_mailer.interfaces import IMailEndpoint
 from guillotina_mailer.interfaces import IMailer
 from html2text import html2text
-from repoze.sendmail import encoding
 from zope.interface import implementer
 
 import aiosmtplib
