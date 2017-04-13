@@ -3,6 +3,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate
 from guillotina import app_settings
+from guillotina import configure
 from guillotina.async import QueueUtility
 from guillotina.component import queryUtility
 from guillotina.utils import get_random_string
@@ -24,7 +25,7 @@ import time
 logger = logging.getLogger(__name__)
 
 
-@implementer(IMailEndpoint)
+@configure.utility(provides=IMailEndpoint, name="smtp")
 class SMTPMailEndpoint(object):
 
     def __init__(self):

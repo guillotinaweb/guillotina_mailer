@@ -33,3 +33,4 @@ def includeme(root, settings):
     }, loop=root.app.loop)
 
     configure.scan('guillotina_mailer.api')
+    configure.scan('guillotina_mailer.utility')
