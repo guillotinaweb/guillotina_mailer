@@ -1,26 +1,23 @@
 # -*- coding: utf-8 -*-
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.utils import formatdate
-from guillotina import app_settings
-from guillotina import configure
-from guillotina.async import QueueUtility
-from guillotina.component import queryUtility
-from guillotina.utils import get_random_string
-from guillotina_mailer import encoding
-from guillotina_mailer.exceptions import NoEndpointDefinedException
-from guillotina_mailer.interfaces import IMailEndpoint
-from guillotina_mailer.interfaces import IMailer
-from html2text import html2text
-from zope.interface import implementer
-
-import aiosmtplib
 import asyncio
 import logging
 import smtplib
 import socket
 import time
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import formatdate
 
+import aiosmtplib
+from guillotina import app_settings, configure
+from guillotina.async_util import QueueUtility
+from guillotina.component import query_utility
+from guillotina.utils import get_random_string
+from guillotina_mailer import encoding
+from guillotina_mailer.exceptions import NoEndpointDefinedException
+from guillotina_mailer.interfaces import IMailEndpoint, IMailer
+from html2text import html2text
+from zope.interface import implementer
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +43,8 @@ class SMTPMailEndpoint(object):
 
     async def send(self, sender, recipients, message, retry=False):
         try:
-            return await self.conn.sendmail(sender, recipients, message.as_string())
+            return await self.conn.sendmail(
+                sender, recipients, message.as_string())
         except aiosmtplib.errors.SMTPServerDisconnected:
             if retry:
                 # we only retry once....
@@ -80,18 +78,20 @@ class MailerUtility(QueueUtility):
         """
         if endpoint_name not in self._endpoints:
             settings = self.settings['endpoints'][endpoint_name]
-            utility = queryUtility(IMailEndpoint, name=settings['type'])
+            utility = query_utility(IMailEndpoint, name=settings['type'])
             if utility is None:
                 if len(self._endpoints) > 0:
                     fallback = list(self.endpoints.keys())[0]
-                    logger.warn('Endpoint "{}" not configured. Falling back to "{}"'.format(
-                        endpoint_name, fallback
-                    ))
+                    logger.warn(
+                        'Endpoint "{}" not configured. Falling back to "{}"'.format(  # noqa
+                            endpoint_name, fallback
+                        ))
                     return self._endpoints[endpoint_name]
                 else:
-                    raise NoEndpointDefinedException('{} mail endpoint not defined'.format(
-                        endpoint_name
-                    ))
+                    raise NoEndpointDefinedException(
+                        '{} mail endpoint not defined'.format(
+                            endpoint_name
+                        ))
             utility.from_settings(settings)
             self._endpoints[endpoint_name] = utility
         return self._endpoints[endpoint_name]
@@ -101,8 +101,7 @@ class MailerUtility(QueueUtility):
         endpoint = self.get_endpoint(endpoint_name)
         return await endpoint.send(sender, recipients, message)
 
-    async def initialize(self, app):
-        self.app = app
+    async def initialize(self):
         while True:
             got_obj = False
             try:
@@ -112,10 +111,14 @@ class MailerUtility(QueueUtility):
                     await self._send(*args)
                 except Exception as exc:
                     logger.error('Error sending mail', exc_info=True)
-            except KeyboardInterrupt or MemoryError or SystemExit or asyncio.CancelledError:
+            except RuntimeError:
+                # just dive out here.
+                return
+            except (KeyboardInterrupt, MemoryError,
+                    SystemExit, asyncio.CancelledError):
                 self._exceptions = True
                 raise
-            except:  # noqa
+            except Exception:  # noqa
                 self._exceptions = True
                 logger.error('Worker call failed', exc_info=True)
             finally:
@@ -126,7 +129,7 @@ class MailerUtility(QueueUtility):
         if not text and html and self.settings.get('use_html2text', True):
             try:
                 text = html2text(html)
-            except:
+            except Exception:
                 pass
 
         if text is not None:
@@ -159,19 +162,23 @@ class MailerUtility(QueueUtility):
                    endpoint='default', priority=3, attachments=[]):
         if sender is None:
             sender = self.settings.get('default_sender')
-        message = self.get_message(recipient, subject, sender, message, text,
-                                   html, message_id=message_id, attachments=attachments)
-        await self._queue.put((priority, time.time(),
-                               (sender, [recipient], message, endpoint)))
+        message = self.get_message(
+            recipient, subject, sender, message, text,
+            html, message_id=message_id, attachments=attachments)
+        await self._queue.put(
+            (priority, time.time(),
+             (sender, [recipient], message, endpoint)))
 
-    async def send_immediately(self, recipient=None, subject=None, message=None,
-                               text=None, html=None, sender=None, message_id=None,
+    async def send_immediately(self, recipient=None, subject=None,
+                               message=None, text=None, html=None,
+                               sender=None, message_id=None,
                                endpoint='default', fail_silently=False,
                                attachments=[]):
         if sender is None:
             sender = self.settings.get('default_sender')
-        message = self.get_message(recipient, subject, sender, message, text,
-                                   html, message_id=message_id, attachments=attachments)
+        message = self.get_message(
+            recipient, subject, sender, message, text,
+            html, message_id=message_id, attachments=attachments)
         encoding.cleanup_message(message)
         if message['Date'] is None:
             message['Date'] = formatdate()
@@ -198,8 +205,10 @@ class PrintingMailerUtility(MailerUtility):
         self._queue = asyncio.Queue(loop=loop)
         self._settings = settings
 
-    async def _send(self, sender, recipients, message, endpoint_name='default'):
-        print('DEBUG MAILER({}): \n {}'.format(endpoint_name, message.as_string()))
+    async def _send(self, sender, recipients, message,
+                    endpoint_name='default'):
+        print('DEBUG MAILER({}): \n {}'.format(
+            endpoint_name, message.as_string()))
 
 
 @implementer(IMailer)
@@ -211,7 +220,8 @@ class TestMailerUtility(MailerUtility):
 
     async def send(self, recipient=None, subject=None, message=None,
                    text=None, html=None, sender=None, message_id=None,
-                   endpoint='default', priority=3, immediate=False, attachments=[]):
+                   endpoint='default', priority=3, immediate=False,
+                   attachments=[]):
         self.mail.append({
             'subject': subject,
             'sender': sender,
@@ -222,7 +232,7 @@ class TestMailerUtility(MailerUtility):
             'message_id': message_id,
             'endpoint': endpoint,
             'immediate': immediate,
-            'attachments': []
+            'attachments': attachments
         })
 
     async def send_immediately(self, *args, **kwargs):
