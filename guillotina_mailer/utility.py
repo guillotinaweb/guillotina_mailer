@@ -105,7 +105,7 @@ class MailerUtility(QueueUtility):
         while True:
             got_obj = False
             try:
-                priority, _, args = await self._queue.get()
+                priority, _, args = await self.queue.get()
                 got_obj = True
                 try:
                     await self._send(*args)
@@ -123,7 +123,7 @@ class MailerUtility(QueueUtility):
                 logger.error('Worker call failed', exc_info=True)
             finally:
                 if got_obj:
-                    self._queue.task_done()
+                    self.queue.task_done()
 
     def build_message(self, message, text=None, html=None):
         if not text and html and self.settings.get('use_html2text', True):
@@ -165,7 +165,7 @@ class MailerUtility(QueueUtility):
         message = self.get_message(
             recipient, subject, sender, message, text,
             html, message_id=message_id, attachments=attachments)
-        await self._queue.put(
+        await self.queue.put(
             (priority, time.time(),
              (sender, [recipient], message, endpoint)))
 
@@ -202,7 +202,6 @@ class MailerUtility(QueueUtility):
 class PrintingMailerUtility(MailerUtility):
 
     def __init__(self, settings, loop=None):
-        self._queue = asyncio.Queue(loop=loop)
         self._settings = settings
 
     async def _send(self, sender, recipients, message,
@@ -215,7 +214,6 @@ class PrintingMailerUtility(MailerUtility):
 class TestMailerUtility(MailerUtility):
 
     def __init__(self, settings, loop=None):
-        self._queue = asyncio.Queue(loop=loop)
         self.mail = []
 
     async def send(self, recipient=None, subject=None, message=None,

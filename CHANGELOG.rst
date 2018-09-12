@@ -1,7 +1,8 @@
 1.0.4 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix queue
+  [vangheem]
 
 
 1.0.3 (2018-09-12)
