@@ -30,7 +30,7 @@ def includeme(root, settings):
         "provides": "guillotina_mailer.interfaces.IMailer",
         "factory": utility,
         "settings": settings.get('mailer', {})
-    }, loop=root.app.loop)
+    })
 
     configure.scan('guillotina_mailer.api')
     configure.scan('guillotina_mailer.utility')

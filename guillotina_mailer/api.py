@@ -1,6 +1,6 @@
 from guillotina import configure
 from guillotina.api.service import Service
-from guillotina.browser import Response
+from guillotina.response import Response
 from guillotina.component import queryUtility
 from guillotina.interfaces import IContainer
 from guillotina_mailer.interfaces import IMailer
@@ -14,6 +14,6 @@ class SendMail(Service):
         data = await self.request.json()
         mailer = queryUtility(IMailer)
         await mailer.send(**data)
-        return Response(response={
+        return Response(content={
             'messages_sent': 1
         }, status=200)
