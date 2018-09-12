@@ -58,6 +58,8 @@ class SMTPMailEndpoint(object):
 @implementer(IMailer)
 class MailerUtility(QueueUtility):
 
+    _queue = None
+
     def __init__(self, settings, loop=None):
         self._settings = settings
         super(MailerUtility, self).__init__(settings, loop=loop)
@@ -202,6 +204,7 @@ class MailerUtility(QueueUtility):
 class PrintingMailerUtility(MailerUtility):
 
     def __init__(self, settings, loop=None):
+        self._queue = asyncio.Queue(loop=loop)
         self._settings = settings
 
     async def _send(self, sender, recipients, message,
@@ -214,6 +217,7 @@ class PrintingMailerUtility(MailerUtility):
 class TestMailerUtility(MailerUtility):
 
     def __init__(self, settings, loop=None):
+        self._queue = asyncio.Queue(loop=loop)
         self.mail = []
 
     async def send(self, recipient=None, subject=None, message=None,
