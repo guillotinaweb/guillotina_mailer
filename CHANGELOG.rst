@@ -1,8 +1,8 @@
-1.0.6 (unreleased)
+1.1.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
-
+- Use a retriable async queue to send emails
+  [vangheem]
 
 1.0.5 (2018-09-12)
 ------------------

@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 from guillotina import configure
+from guillotina_mailer.interfaces import IMailer
+from guillotina.component import provide_utility
+from guillotina.utils import import_class
+
 
 app_settings = {
     "mailer": {
@@ -24,13 +28,11 @@ configure.grant(permission="mailer.SendMail", role="guillotina.ContainerAdmin")
 
 
 def includeme(root, settings):
-    utility = settings.get('mailer', {}).get('utility',
-                                             app_settings['mailer']['utility'])
-    root.add_async_utility({
-        "provides": "guillotina_mailer.interfaces.IMailer",
-        "factory": utility,
-        "settings": settings.get('mailer', {})
-    })
+    factory = import_class(
+        settings.get('mailer', {}).get('utility',
+                                       app_settings['mailer']['utility']))
+    utility = factory()
+    provide_utility(utility, IMailer)
 
     configure.scan('guillotina_mailer.api')
     configure.scan('guillotina_mailer.utility')

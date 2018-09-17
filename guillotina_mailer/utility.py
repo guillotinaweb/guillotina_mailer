@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import logging
-import smtplib
 import socket
 import time
 from email.mime.multipart import MIMEMultipart
@@ -10,7 +9,6 @@ from email.utils import formatdate
 
 import aiosmtplib
 from guillotina import app_settings, configure
-from guillotina.async_util import QueueUtility
 from guillotina.component import query_utility
 from guillotina.utils import get_random_string
 from guillotina_mailer import encoding
@@ -27,44 +25,72 @@ class SMTPMailEndpoint(object):
 
     def __init__(self):
         self.settings = {}
-        self._conn = None
+        self.conn = None
+        self.queue = asyncio.Queue()
+        self._exceptions = None
 
     def from_settings(self, settings):
         self.settings = settings
 
-    @property
-    def conn(self):
-        if self._conn is None:
-            self._conn = aiosmtplib.SMTP(
+    async def connect(self):
+        try:
+            self.conn = aiosmtplib.SMTP(
                 self.settings['host'],
                 self.settings['port']
             )
-        return self._conn
-
-    async def send(self, sender, recipients, message, retry=False):
-        try:
-            return await self.conn.sendmail(
-                sender, recipients, message.as_string())
-        except aiosmtplib.errors.SMTPServerDisconnected:
-            if retry:
-                # we only retry once....
-                # we could manage a retry queue and wait until server becomes
-                # active if it is down...
-                raise
             await self.conn.connect()
-            return await self.send(sender, recipients, message, retry=True)
+        except Exception:
+            logger.error('Error connecting to smtp server', exc_info=True)
+
+    async def initialize(self):
+        await self.connect()
+        while True:
+            got_obj = False
+            reschedule = False
+            try:
+                tries, args = await self.queue.get()
+                got_obj = True
+                try:
+                    await self.conn.sendmail(*args)
+                except Exception as exc:
+                    reschedule = True
+                    logger.error(
+                        'Error sending mail {} times, retrying again'.format(
+                            tries + 1),
+                        exc_info=True)
+            except RuntimeError:
+                # just dive out here.
+                return
+            except (KeyboardInterrupt, MemoryError,
+                    SystemExit, asyncio.CancelledError):
+                self._exceptions = True
+                raise
+            except Exception:  # noqa
+                self._exceptions = True
+                logger.error('Worker call failed', exc_info=True)
+            finally:
+                if got_obj:
+                    self.queue.task_done()
+                if reschedule:
+                    if tries < 20:
+                        # reschedule means there was an error,
+                        # pause for a bit in case there is a problem...
+                        await asyncio.sleep(1)
+                        await self.connect()
+                        await self.queue.put((tries + 1, args))
+
+    async def send(self, sender, recipients, message):
+        await self.queue.put((0, (
+            sender, recipients, message.as_bytes()
+        )))
 
 
 @implementer(IMailer)
-class MailerUtility(QueueUtility):
+class MailerUtility:
 
-    _queue = None
-
-    def __init__(self, settings, loop=None):
-        self._settings = settings
-        super(MailerUtility, self).__init__(settings, loop=loop)
+    def __init__(self, settings=None, loop=None):
+        self._settings = settings or {}
         self._endpoints = {}
-        self._exceptions = False
         self.loop = loop
 
     @property
@@ -95,37 +121,14 @@ class MailerUtility(QueueUtility):
                             endpoint_name
                         ))
             utility.from_settings(settings)
+            asyncio.ensure_future(utility.initialize())
             self._endpoints[endpoint_name] = utility
         return self._endpoints[endpoint_name]
 
-    async def _send(self, sender, recipients, message, endpoint_name='default',
-                    retry=False):
+    async def _send(self, sender, recipients, message,
+                    endpoint_name='default'):
         endpoint = self.get_endpoint(endpoint_name)
         return await endpoint.send(sender, recipients, message)
-
-    async def initialize(self):
-        while True:
-            got_obj = False
-            try:
-                priority, _, args = await self.queue.get()
-                got_obj = True
-                try:
-                    await self._send(*args)
-                except Exception as exc:
-                    logger.error('Error sending mail', exc_info=True)
-            except RuntimeError:
-                # just dive out here.
-                return
-            except (KeyboardInterrupt, MemoryError,
-                    SystemExit, asyncio.CancelledError):
-                self._exceptions = True
-                raise
-            except Exception:  # noqa
-                self._exceptions = True
-                logger.error('Worker call failed', exc_info=True)
-            finally:
-                if got_obj:
-                    self.queue.task_done()
 
     def build_message(self, message, text=None, html=None):
         if not text and html and self.settings.get('use_html2text', True):
@@ -167,29 +170,10 @@ class MailerUtility(QueueUtility):
         message = self.get_message(
             recipient, subject, sender, message, text,
             html, message_id=message_id, attachments=attachments)
-        await self.queue.put(
-            (priority, time.time(),
-             (sender, [recipient], message, endpoint)))
-
-    async def send_immediately(self, recipient=None, subject=None,
-                               message=None, text=None, html=None,
-                               sender=None, message_id=None,
-                               endpoint='default', fail_silently=False,
-                               attachments=[]):
-        if sender is None:
-            sender = self.settings.get('default_sender')
-        message = self.get_message(
-            recipient, subject, sender, message, text,
-            html, message_id=message_id, attachments=attachments)
         encoding.cleanup_message(message)
         if message['Date'] is None:
             message['Date'] = formatdate()
-
-        try:
-            return await self._send(sender, [recipient], message, endpoint)
-        except smtplib.socket.error:
-            if not fail_silently:
-                raise
+        await self._send(sender, recipient, message, endpoint)
 
     def create_message_id(self, _id=''):
         domain = self.settings['domain']
@@ -203,7 +187,7 @@ class MailerUtility(QueueUtility):
 @implementer(IMailer)
 class PrintingMailerUtility(MailerUtility):
 
-    def __init__(self, settings, loop=None):
+    def __init__(self, settings=None, loop=None):
         self._queue = asyncio.Queue(loop=loop)
         self._settings = settings
 
@@ -216,7 +200,7 @@ class PrintingMailerUtility(MailerUtility):
 @implementer(IMailer)
 class TestMailerUtility(MailerUtility):
 
-    def __init__(self, settings, loop=None):
+    def __init__(self, settings=None, loop=None):
         self._queue = asyncio.Queue(loop=loop)
         self.mail = []
 
@@ -236,6 +220,3 @@ class TestMailerUtility(MailerUtility):
             'immediate': immediate,
             'attachments': attachments
         })
-
-    async def send_immediately(self, *args, **kwargs):
-        await self.send(*args, **kwargs, immediate=True)
