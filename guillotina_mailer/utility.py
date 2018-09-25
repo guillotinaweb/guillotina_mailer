@@ -189,7 +189,7 @@ class PrintingMailerUtility(MailerUtility):
 
     def __init__(self, settings=None, loop=None):
         self._queue = asyncio.Queue(loop=loop)
-        self._settings = settings
+        self._settings = settings or {}
 
     async def _send(self, sender, recipients, message,
                     endpoint_name='default'):
