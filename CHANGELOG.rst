@@ -1,8 +1,8 @@
 1.1.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
-
+- Fix getting empty settings
+  [vangheem]
 
 1.1.0 (2018-09-17)
 ------------------

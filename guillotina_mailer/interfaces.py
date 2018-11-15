@@ -15,7 +15,8 @@ class IMailer(Interface):
         pass
 
     def send_immediately(recipient=None, subject=None, message=None,
-                         text=None, html=None, sender=None, fail_silently=False):
+                         text=None, html=None, sender=None,
+                         fail_silently=False):
         pass
 
 
