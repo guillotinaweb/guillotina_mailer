@@ -39,6 +39,12 @@ class SMTPMailEndpoint(object):
                 self.settings['port']
             )
             await self.conn.connect()
+            if 'username' in self.settings:
+                await self.conn.login(
+                    self.settings['username'],
+                    self.settings['password'])
+            if 'tls' in self.settings and self.settings['tls']:
+                await self.conn.starttls()
         except Exception:
             logger.error('Error connecting to smtp server', exc_info=True)
 
