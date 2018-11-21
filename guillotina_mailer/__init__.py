@@ -19,7 +19,14 @@ app_settings = {
         "utility": "guillotina_mailer.utility.MailerUtility",
         "use_html2text": True,
         "domain": None
-    }
+    },
+    "load_utilities": {
+        "mailer": {
+            "provides": "guillotina_mailer.interfaces.IMailEndpoint",  # noqa
+            "factory": "guillotina_mailer.utility.SMTPMailEndpoint",
+            "settings": {}
+        }
+    },
 }
 
 
