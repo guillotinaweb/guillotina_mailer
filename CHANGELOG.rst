@@ -1,8 +1,8 @@
 1.1.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
-
+- Adding options for username and passwd
+  [bloodbare]
 
 1.1.1 (2018-11-15)
 ------------------
