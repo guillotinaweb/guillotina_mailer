@@ -26,7 +26,7 @@ setup(
     packages=find_packages(exclude=['ez_setup']),
     install_requires=[
         'setuptools',
-        'guillotina',
+        'guillotina>=4.0.0,<5.0.0',
         'html2text',
         'aiosmtplib'
     ],

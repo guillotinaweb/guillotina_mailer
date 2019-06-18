@@ -1,7 +1,7 @@
 1.1.3 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Restrict guillotina version
 
 
 1.1.2 (2018-11-21)
